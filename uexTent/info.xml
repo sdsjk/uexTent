@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<uexplugins>
+    <plugin uexName="uexTent" version="3.0.9" build = "9">
+        <info>9:修复发送带有url的内容时，url被截断的问题</info>
+        <build>8:已经授权时，注册接口提示已授权</build>
+        <build>7:修改uexTent插件中cbShare回调方法返回值：成功为0，失败为1</build>
+        <build>6:添加共享时授权过期处理</build>
+        <build>5:修复注册回调函数在没有安装腾讯微博的时候不被回调的问题。</build>
+        <build>4:增加一个新的注册回调函数</build>
+        <build>3:增加一个注册回调函数</build>
+        <build>2:修复资源问题</build>
+        <build>1:修复资源缺少问题</build>
+        <build>0:腾讯微博分享功能插件</build>
+        </plugin>
+</uexplugins>

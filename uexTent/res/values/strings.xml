@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<resources>
+    <!-- tencent weibo -->
+    <string name="plugin_tencent_parmeters_error">参数错误</string>
+    <string name="plugin_tencent_send_text_ok">分享文字成功</string>
+    <string name="plugin_tencent_send_text_err">分享文字失败</string>
+    <string name="plugin_tencent_send_image_ok">分享图片成功</string>
+    <string name="plugin_tencent_send_image_err">分享图片失败</string>
+    <string name="plugin_tencent_content_cannot_be_null">分享内容不能为空</string>
+    <string name="plugin_tencent_image_cannot_be_null">分享图片的路径和描述不能为空</string>
+    <string name="plugin_tencent_image_path_cannot_be_null">分享图片的路径不能为空</string>
+    <string name="plugin_tencent_file_too_large">文件容量不能大于5M</string>
+    <string name="plugin_tencent_file_not_exists">文件不存在</string>
+    <string name="plugin_tencent_sending">正在发送请稍后......</string>
+    <string name="plugin_tencent_input_char_number_less_140">请重新输入少于140个字的内容</string>
+	<string name="plugin_tencent_auth">请先授权</string>
+
+</resources>
