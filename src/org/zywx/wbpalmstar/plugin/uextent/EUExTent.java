@@ -12,22 +12,20 @@ import org.zywx.wbpalmstar.engine.universalex.EUExBase;
 import org.zywx.wbpalmstar.engine.universalex.EUExCallback;
 import org.zywx.wbpalmstar.engine.universalex.EUExUtil;
 
-import android.app.ActivityGroup;
-import android.app.LocalActivityManager;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.location.Location;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.tencent.weibo.sdk.android.api.WeiboAPI;
@@ -44,9 +42,6 @@ import com.tencent.weibo.sdk.android.network.HttpCallback;
 @SuppressWarnings("deprecation")
 public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 5655082989178345497L;
 
 	private static final String TAG = "EUExTent";
@@ -56,8 +51,9 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 	private static final String CALLBACK = "uexTent.cbShare";
 
 	private static final String function_cbRegisterApp = "uexTent.cbRegisterApp";
+    private static final int INTENT_REGISTER_CALLBACK = 1;
 
-	private String accessToken;
+    private String accessToken;
 	private WeiboAPI weiboAPI;
 	private AccountModel account;
 	private ProgressDialog dialog;
@@ -66,59 +62,174 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 	private static final int REGISTER_ERROR=1;//注册错误
 	private static final int AUTHORIZATION_ERROR=2;//授权错误
 
+
+    private static final String BUNDLE_DATA = "data";
+    private static final int MSG_REGISTER_APP = 1;
+    private static final int MSG_SEND_TEXT_CONTENT = 2;
+    private static final int MSG_SEND_IMAGE_CONTENT = 3;
+
 	public EUExTent(Context arg0, EBrowserView arg1) {
 		super(arg0, arg1);
 		EUExUtil.init(arg0);
 	}
 
-	public void registerApp(String[] args) {
-		final String appKey = args[0];
-		final String appSecret = args[1];
-		final String registerUrl = args[2];
-		switch (checkAccount()) {
-		case REGISTER_ERROR:// 没有注册
-			Util.saveSharePersistent(mContext, "appKey", appKey);// 保存key
-			Util.saveSharePersistent(mContext, "appSecret", appSecret);// 保存secret
-			Util.saveSharePersistent(mContext, "registerUrl", registerUrl);// 保存url
-			auth(Long.valueOf(appKey), appSecret, registerUrl);
-			break;
-		case AUTHORIZATION_ERROR:// 授权过期
-			AuthHelper.unregister(mContext);
-			auth(Long.valueOf(appKey), appSecret, registerUrl);
-			break;
-		default:
-			jsCallback(function_cbRegisterApp, 0, EUExCallback.F_C_INT, EUExCallback.F_C_SUCCESS);// data=1,表示失败，data=0，表示成功
-			break;
-		}
-		Log.i(TAG, "register");
-	};
+    public void registerApp(String[] params) {
+        if (params == null || params.length < 1) {
+            errorCallback(0, 0, "error params!");
+            return;
+        }
+        Message msg = new Message();
+        msg.obj = this;
+        msg.what = MSG_REGISTER_APP;
+        Bundle bd = new Bundle();
+        bd.putStringArray(BUNDLE_DATA, params);
+        msg.setData(bd);
+        mHandler.sendMessage(msg);
+    }
 
-	public void sendTextContent(String[] args) {
-		Log.i(TAG, "sendTextContent");
-		//如果授权过期,就反注册并提示
-		switch (checkAccount()) {
-		case REGISTER_ERROR:// 未注册
-			jsCallback(CALLBACK, 0, 0, EUExCallback.F_C_FAILED);//回调分享失败
-			return;
-		case AUTHORIZATION_ERROR:// 授权过期
-			AuthHelper.unregister(mContext);
-			auth(Long.valueOf(getSharePersistent("appKey")), getSharePersistent("appSecret"), getSharePersistent("registerUrl"));
-			break;
-		}
-		if (args == null || args.length < 1) {
-			toast("plugin_tencent_parmeters_error");
-			return;
-		}
+    private void registerAppMsg(String[] args) {
+        final String appKey = args[0];
+        final String appSecret = args[1];
+        final String registerUrl = args[2];
+        switch (checkAccount()) {
+            case REGISTER_ERROR:// 没有注册
+                Util.saveSharePersistent(mContext, "appKey", appKey);// 保存key
+                Util.saveSharePersistent(mContext, "appSecret", appSecret);// 保存secret
+                Util.saveSharePersistent(mContext, "registerUrl", registerUrl);// 保存url
+                auth(Long.valueOf(appKey), appSecret, registerUrl);
+                break;
+            case AUTHORIZATION_ERROR:// 授权过期
+                AuthHelper.unregister(mContext);
+                auth(Long.valueOf(appKey), appSecret, registerUrl);
+                break;
+            default:
+                jsCallback(function_cbRegisterApp, 0, EUExCallback.F_C_INT, EUExCallback.F_C_SUCCESS);// data=1,表示失败，data=0，表示成功
+                break;
+        }
+        Log.i(TAG, "register");
+    }
 
-		if (args[0] == null || args[0].equals("")) {
-			toast("plugin_tencent_content_cannot_be_null");
-			return;
-		}
+    public void sendTextContent(String[] params) {
+        if (params == null || params.length < 1) {
+            errorCallback(0, 0, "error params!");
+            return;
+        }
+        Message msg = new Message();
+        msg.obj = this;
+        msg.what = MSG_SEND_TEXT_CONTENT;
+        Bundle bd = new Bundle();
+        bd.putStringArray(BUNDLE_DATA, params);
+        msg.setData(bd);
+        mHandler.sendMessage(msg);
+    }
 
-		boolean isSendImage = false;
-		String text = args[0];
-		sendData(isSendImage, text);
-	}
+    private void sendTextContentMsg(String[] args) {
+        Log.i(TAG, "sendTextContent");
+        //如果授权过期,就反注册并提示
+        switch (checkAccount()) {
+            case REGISTER_ERROR:// 未注册
+                jsCallback(CALLBACK, 0, 0, EUExCallback.F_C_FAILED);//回调分享失败
+                return;
+            case AUTHORIZATION_ERROR:// 授权过期
+                AuthHelper.unregister(mContext);
+                auth(Long.valueOf(getSharePersistent("appKey")), getSharePersistent("appSecret"), getSharePersistent("registerUrl"));
+                break;
+        }
+        if (args == null || args.length < 1) {
+            toast("plugin_tencent_parmeters_error");
+            return;
+        }
+
+        if (args[0] == null || args[0].equals("")) {
+            toast("plugin_tencent_content_cannot_be_null");
+            return;
+        }
+
+        boolean isSendImage = false;
+        String text = args[0];
+        sendData(isSendImage, text);
+    }
+
+    public void sendImageContent(String[] params) {
+        if (params == null || params.length < 1) {
+            errorCallback(0, 0, "error params!");
+            return;
+        }
+        Message msg = new Message();
+        msg.obj = this;
+        msg.what = MSG_SEND_IMAGE_CONTENT;
+        Bundle bd = new Bundle();
+        bd.putStringArray(BUNDLE_DATA, params);
+        msg.setData(bd);
+        mHandler.sendMessage(msg);
+    }
+
+    private void sendImageContentMsg(String[] args) {
+        Log.i(TAG, "sendImageContent");
+        //如果授权过期,就反注册并提示
+        switch (checkAccount()) {
+            case REGISTER_ERROR:// 未注册
+                jsCallback(CALLBACK, 0, 0, EUExCallback.F_C_FAILED);//回调分享失败
+                return;
+            case AUTHORIZATION_ERROR:// 授权过期
+                AuthHelper.unregister(mContext);
+                auth(Long.valueOf(getSharePersistent("appKey")), getSharePersistent("appSecret"), getSharePersistent("registerUrl"));
+                break;
+        }
+        if (args == null || args.length < 2) {
+            toast("plugin_tencent_parmeters_error");
+            return;
+        }
+
+        if (TextUtils.isEmpty(args[0])) {
+            toast("plugin_tencent_image_path_cannot_be_null");
+            return;
+        }
+        String path = args[0];
+        String content = args[1] == null ? "" : args[1];
+        path = TentUtils.getAbsPath(path, mBrwView);
+        boolean isSendImage = true;
+
+        if (path != null) {
+            if (path.startsWith("/")) {
+                File file;
+                if (path == null || !(file = new File(path)).exists()) {
+                    toast("plugin_tencent_file_not_exists");
+                    return;
+                }
+
+                if (file.length() > MAX_SIZE) {
+                    toast("plugin_tencent_file_too_large");
+                    return;
+                }
+
+                mBitmap = BitmapFactory.decodeFile(path);
+            } else {
+                InputStream is;
+                try {
+                    is = mContext.getResources().getAssets().open(path);
+                    if (is == null) {
+                        toast("plugin_tencent_file_not_exists");
+                        return;
+                    }
+
+                    if (is.available() >= MAX_SIZE) {
+                        toast("plugin_tencent_file_too_large");
+                        return;
+                    }
+                    mBitmap = BitmapFactory.decodeStream(is);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        if (mBitmap == null) {
+            toast("plugin_tencent_file_not_exists");
+            return;
+        }
+        sendData(isSendImage, content);
+    }
+
 	/**
 	 * 检测授权，授权过期就重新提交信息授权
 	 * 
@@ -158,72 +269,6 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 
 	}
 
-	public void sendImageContent(String[] args) {
-		Log.i(TAG, "sendImageContent");
-		//如果授权过期,就反注册并提示
-		switch (checkAccount()) {
-		case REGISTER_ERROR:// 未注册
-			jsCallback(CALLBACK, 0, 0, EUExCallback.F_C_FAILED);//回调分享失败
-			return;
-		case AUTHORIZATION_ERROR:// 授权过期
-			AuthHelper.unregister(mContext);
-			auth(Long.valueOf(getSharePersistent("appKey")), getSharePersistent("appSecret"), getSharePersistent("registerUrl"));
-			break;
-		}
-		if (args == null || args.length < 2) {
-			toast("plugin_tencent_parmeters_error");
-			return;
-		}
-
-		if (TextUtils.isEmpty(args[0])) {
-			toast("plugin_tencent_image_path_cannot_be_null");
-			return;
-		}
-		String path = args[0];
-		String content = args[1] == null ? "" : args[1];
-		path = TentUtils.getAbsPath(path, mBrwView);
-		boolean isSendImage = true;
-
-		if (path != null) {
-			if (path.startsWith("/")) {
-				File file;
-				if (path == null || !(file = new File(path)).exists()) {
-					toast("plugin_tencent_file_not_exists");
-					return;
-				}
-
-				if (file.length() > MAX_SIZE) {
-					toast("plugin_tencent_file_too_large");
-					return;
-				}
-
-				mBitmap = BitmapFactory.decodeFile(path);
-			} else {
-				InputStream is;
-				try {
-					is = mContext.getResources().getAssets().open(path);
-					if (is == null) {
-						toast("plugin_tencent_file_not_exists");
-						return;
-					}
-
-					if (is.available() >= MAX_SIZE) {
-						toast("plugin_tencent_file_too_large");
-						return;
-					}
-					mBitmap = BitmapFactory.decodeStream(is);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-		if (mBitmap == null) {
-			toast("plugin_tencent_file_not_exists");
-			return;
-		}
-		sendData(isSendImage, content);
-	}
-
 	private void auth(final long appid, String app_secket,
 			final String redirectUri) {
 		final Context context = mContext;
@@ -234,20 +279,17 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 			// 如果当前设备没有安装腾讯微博客户端，走这里
 			@Override
 			public void onWeiBoNotInstalled() {
-				((ActivityGroup) mContext).runOnUiThread(new Runnable() {
+                AuthHelper.unregister(mContext);
+                Intent i = new Intent(mContext, Authorize.class);
+                i.putExtra(Authorize.APP_KEY, String.valueOf(appid));
+                i.putExtra(Authorize.REDIRECT_URI, redirectUri);
 
-					@Override
-					public void run() {
-						AuthHelper.unregister(mContext);
-						Intent i = new Intent(mContext, Authorize.class);
-						i.putExtra(Authorize.APP_KEY, String.valueOf(appid));
-						i.putExtra(Authorize.REDIRECT_URI, redirectUri);
-						i.putExtra(Authorize.EUEX_OBJECT, EUExTent.this);
-						addViewFromActivity(TAG, i);
-					}
-
-				});
-			}
+                try {
+                    startActivityForResult(i, INTENT_REGISTER_CALLBACK);
+                } catch (ActivityNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
 
 			// 如果当前设备没安装指定版本的微博客户端，走这里
 			@Override
@@ -256,8 +298,11 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 				Intent i = new Intent(mContext, Authorize.class);
 				i.putExtra(Authorize.APP_KEY, String.valueOf(appid));
 				i.putExtra(Authorize.REDIRECT_URI, redirectUri);
-				addViewFromActivity(TAG, i);
-
+                try {
+                    startActivityForResult(i, INTENT_REGISTER_CALLBACK);
+                } catch (ActivityNotFoundException e) {
+                    e.printStackTrace();
+                }
 			}
 
 			// 如果授权失败，走这里
@@ -266,9 +311,7 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 				Toast.makeText(mContext, "result : " + result,
 						Toast.LENGTH_LONG).show();
 				AuthHelper.unregister(mContext);
-
 				cbReister(false);
-
 			}
 
 			// 授权成功，走这里
@@ -372,7 +415,6 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 
 	@Override
 	protected boolean clean() {
-		close();
 		return true;
 	}
 
@@ -419,56 +461,13 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 		}).start();
 	}
 
-	private void addViewFromActivity(final String id, final Intent intent) {
-		((ActivityGroup) mContext).runOnUiThread(new Runnable() {
 
-			@Override
-			public void run() {
-				closeView();
-				RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-						RelativeLayout.LayoutParams.FILL_PARENT,
-						RelativeLayout.LayoutParams.FILL_PARENT);
-				params.leftMargin = 0;
-				params.topMargin = 0;
-				openView(id, intent, params);
-			}
-		});
-	}
-
-	public void close() {
-		((ActivityGroup) mContext).runOnUiThread(new Runnable() {
-
-			@Override
-			public void run() {
-				closeView();
-			}
-
-		});
-	}
-
-	private void openView(String id, Intent intent,
-			RelativeLayout.LayoutParams params) {
-		LocalActivityManager mgr = ((ActivityGroup) mContext)
-				.getLocalActivityManager();
-		Window window = mgr.startActivity(id, intent);
-		mView = window.getDecorView();
-		addViewToCurrentWindow(mView, params);
-	}
-
-	private void closeView() {
-
-		LocalActivityManager mgr = ((ActivityGroup) mContext)
-				.getLocalActivityManager();
-		Window window = mgr.destroyActivity(TAG, true);
-		if (window != null) {
-			mView = window.getDecorView();
-			if (mView != null) {
-				removeViewFromCurrentWindow(mView);
-				mView = null;
-			}
-		}
-
-	}
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == INTENT_REGISTER_CALLBACK){
+            cbReister(data.getBooleanExtra(TentUtils.RESULT_REGISTER, false));
+        }
+    }
 
 	public void cbReister(boolean success) {
 		if (success) {
@@ -480,5 +479,25 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 		}
 
 	}
+    @Override
+    public void onHandleMessage(Message message) {
+        if(message == null){
+            return;
+        }
+        Bundle bundle=message.getData();
+        switch (message.what) {
 
+            case MSG_REGISTER_APP:
+                registerAppMsg(bundle.getStringArray(BUNDLE_DATA));
+                break;
+            case MSG_SEND_TEXT_CONTENT:
+                sendTextContentMsg(bundle.getStringArray(BUNDLE_DATA));
+                break;
+            case MSG_SEND_IMAGE_CONTENT:
+                sendImageContentMsg(bundle.getStringArray(BUNDLE_DATA));
+                break;
+            default:
+                super.onHandleMessage(message);
+        }
+    }
 }

@@ -18,7 +18,8 @@ import android.widget.Toast;
 public class TentUtils {
 	
 	public static final int FILE_MAX_SIZE = 1024*1024*5;
-	public static int fileSize = 0;
+    public static final String RESULT_REGISTER = "result_register";
+    public static int fileSize = 0;
 	
 	static{
 		fileSize = 0;

@@ -2,7 +2,7 @@ package com.tencent.weibo.sdk.android.component;
 
 import java.lang.reflect.Method;
 
-import org.zywx.wbpalmstar.plugin.uextent.EUExTent;
+import org.zywx.wbpalmstar.plugin.uextent.TentUtils;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -10,6 +10,7 @@ import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.http.SslError;
@@ -61,10 +62,11 @@ public class Authorize extends Activity {
 	private String redirectUri = null;
 	private String clientId = null;
 	private boolean isShow = false;
-	private EUExTent mEuExTent;
+    private boolean mDestory = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
+        mDestory = false;
 		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
 		if (!Util.isNetworkAvailable(this)) {
@@ -78,7 +80,6 @@ public class Authorize extends Activity {
 
 			try {
 				Bundle bundle = getIntent().getExtras();
-				mEuExTent = (EUExTent) bundle.getSerializable(EUEX_OBJECT);
 				clientId = bundle.getString(APP_KEY);
 				redirectUri = bundle.getString(REDIRECT_URI);
 				if (clientId == null || "".equals(clientId)
@@ -154,7 +155,7 @@ public class Authorize extends Activity {
 			@Override
 			public void onClick(View v) {
 				// TODO Auto-generated method stub
-				close();
+				close(false);
 			}
 		});
 		cannelLayout.addView(returnBtn);
@@ -205,7 +206,7 @@ public class Authorize extends Activity {
 			public void onProgressChanged(WebView view, int newProgress) {
 				super.onProgressChanged(view, newProgress);
 				Log.d("newProgress", newProgress + "..");
-				if (dialog != null && !dialog.isShowing()) {
+				if (dialog != null && !dialog.isShowing() && !mDestory) {
 					if (newProgress < 100) {
 						dialog.show();
 					} else {
@@ -286,14 +287,15 @@ public class Authorize extends Activity {
 			Util.saveSharePersistent(context, "NICK", nick);
 			Util.saveSharePersistent(context, "CLIENT_ID", clientId);
 			Util.saveSharePersistent(context, "AUTHORIZETIME",
-					String.valueOf(System.currentTimeMillis() / 1000l));
+                    String.valueOf(System.currentTimeMillis() / 1000l));
 			Toast.makeText(Authorize.this, "授权成功", Toast.LENGTH_SHORT).show();
 
-			close();
-			mEuExTent.cbReister(true);
+			close(true);
+			//mEuExTent.cbReister(true);
 			isShow = true;
 		} else {
-			mEuExTent.cbReister(false);
+            close(false);
+			//mEuExTent.cbReister(false);
 		}
 	}
 
@@ -340,7 +342,7 @@ public class Authorize extends Activity {
 					new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							close();
+							close(false);
 						}
 					});
 			_dialog = builder2.create();
@@ -349,9 +351,19 @@ public class Authorize extends Activity {
 		return _dialog;
 	}
 
-	private void close() {
-		if (mEuExTent != null) {
-			mEuExTent.close();
-		}
+    @Override
+    protected void onDestroy() {
+        mDestory = true;
+        dialog = null;
+        _dialog = null;
+        super.onDestroy();
+    }
+
+    private void close(boolean flag) {
+        mDestory = true;
+        Intent intent = new Intent();
+        intent.putExtra(TentUtils.RESULT_REGISTER, flag);
+        setResult(0, intent);
+        finish();
 	}
 }

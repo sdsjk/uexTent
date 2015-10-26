@@ -787,9 +787,6 @@ public class PublishActivity extends Activity implements OnClickListener,
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 			cursor.close();
 
