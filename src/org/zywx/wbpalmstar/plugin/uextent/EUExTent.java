@@ -464,7 +464,7 @@ public class EUExTent extends EUExBase implements HttpCallback, Serializable {
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == INTENT_REGISTER_CALLBACK){
+        if (requestCode == INTENT_REGISTER_CALLBACK && data != null){
             cbReister(data.getBooleanExtra(TentUtils.RESULT_REGISTER, false));
         }
     }
